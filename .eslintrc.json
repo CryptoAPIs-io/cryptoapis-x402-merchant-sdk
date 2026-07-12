@@ -1,0 +1,27 @@
+{
+    "root": true,
+    "extends": "@common/eslint-config-nodejs",
+    "parserOptions": {
+        "ecmaVersion": 2022,
+        "sourceType": "module"
+    },
+    "env": {
+        "node": true,
+        "es2022": true
+    },
+    "overrides": [
+        {
+            "files": ["tests/**/*.js", "**/*.test.js"],
+            "env": { "jest": true },
+            "rules": {
+                "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+                "jsdoc/require-jsdoc": "off",
+                "jsdoc/require-param": "off",
+                "jsdoc/require-param-type": "off",
+                "jsdoc/require-returns": "off",
+                "jsdoc/match-description": "off",
+                "object-shorthand": "off"
+            }
+        }
+    ]
+}

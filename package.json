@@ -1,0 +1,25 @@
+{
+  "name": "@cryptoapis/x402-merchant-sdk",
+  "version": "0.1.0",
+  "description": "CryptoAPIs x402 merchant SDK — monetize any API per-request with the x402 protocol via the CryptoAPIs facilitator (framework-agnostic core + Express middleware).",
+  "type": "module",
+  "private": true,
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./express": "./src/express.js"
+  },
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "lint": "eslint ./src/ ./tests/"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@common/eslint-config-nodejs": "bitbucket:menadev/common-eslint-config-nodejs#master",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsdoc": "^46.10.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.6.0"
+  }
+}
