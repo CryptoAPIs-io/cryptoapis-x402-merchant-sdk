@@ -1,4 +1,4 @@
-# CLAUDE.md — @cryptoapis/x402-merchant-sdk
+# CLAUDE.md — @cryptoapis-io/x402-merchant-sdk
 
 The **merchant-facing** x402 SDK (Node 18+, ESM, zero runtime deps). Lets any API monetize per-request
 with x402, settled by the CryptoAPIs facilitator. One of the x402 client surfaces (the others are the

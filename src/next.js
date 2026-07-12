@@ -1,7 +1,7 @@
 /**
  * Next.js (App Router) route wrapper for x402 — monetize a route handler:
  *
- *   import { withX402 } from '@cryptoapis/x402-merchant-sdk/next';
+ *   import { withX402 } from '@cryptoapis-io/x402-merchant-sdk/next';
  *   const pay = withX402({ apiKey: process.env.CRYPTOAPIS_API_KEY, payTo: '0x…' });
  *   export const GET = pay(
  *       { network: 'eip155:8453', asset: USDC, amount: '10000' },

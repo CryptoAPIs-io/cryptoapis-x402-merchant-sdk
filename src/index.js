@@ -1,9 +1,9 @@
 /**
- * CryptoAPIs x402 merchant SDK (`@cryptoapis/x402-merchant-sdk`) — monetize any API
+ * CryptoAPIs x402 merchant SDK (`@cryptoapis-io/x402-merchant-sdk`) — monetize any API
  * per-request with x402 via the CryptoAPIs facilitator.
  *
  * Framework-agnostic core (this module) + framework adapters
- * (`@cryptoapis/x402-merchant-sdk/express`). The core:
+ * (`@cryptoapis-io/x402-merchant-sdk/express`). The core:
  *   - `createFacilitatorClient` — call /verify + /settle with the merchant api-key
  *   - `buildPaymentRequirements` / `build402Body` — the 402 the merchant returns
  *   - `runPaymentGate` — the transport-agnostic decide (payment-required / paid / invalid)

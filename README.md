@@ -1,4 +1,4 @@
-# @cryptoapis/x402-merchant-sdk
+# @cryptoapis-io/x402-merchant-sdk
 
 Monetize any API per-request with the **x402** protocol, settled by the **CryptoAPIs facilitator**.
 Return an HTTP `402 Payment Required` with the price, and the SDK verifies + settles the buyer's
@@ -8,14 +8,14 @@ the facilitator's gas wallet settles.
 ## Install
 
 ```bash
-npm install @cryptoapis/x402-merchant-sdk
+npm install @cryptoapis-io/x402-merchant-sdk
 ```
 
 ## Express — monetize a route in 3 lines
 
 ```js
 import express from 'express';
-import { paymentMiddleware } from '@cryptoapis/x402-merchant-sdk/express';
+import { paymentMiddleware } from '@cryptoapis-io/x402-merchant-sdk/express';
 
 const app = express();
 const pay = paymentMiddleware({
@@ -44,13 +44,13 @@ Same core, thin adapters:
 
 ```js
 // Hono
-import { paymentMiddleware } from '@cryptoapis/x402-merchant-sdk/hono';
+import { paymentMiddleware } from '@cryptoapis-io/x402-merchant-sdk/hono';
 const pay = paymentMiddleware({ apiKey, payTo: '0x…' });
 app.get('/premium', pay({ network: 'eip155:8453', asset: USDC_BASE, amount: '10000' }),
     (c) => c.json({ paidBy: c.get('x402').payer }));
 
 // Next.js (App Router route handler)
-import { withX402 } from '@cryptoapis/x402-merchant-sdk/next';
+import { withX402 } from '@cryptoapis-io/x402-merchant-sdk/next';
 const pay = withX402({ apiKey, payTo: '0x…' });
 export const GET = pay(
     { network: 'eip155:8453', asset: USDC_BASE, amount: '10000' },
@@ -75,7 +75,7 @@ app.get('/premium', pay([
 Not on Express? Use the core directly:
 
 ```js
-import { createFacilitatorClient, runPaymentGate, buildPaymentRequirements } from '@cryptoapis/x402-merchant-sdk';
+import { createFacilitatorClient, runPaymentGate, buildPaymentRequirements } from '@cryptoapis-io/x402-merchant-sdk';
 
 const facilitator = createFacilitatorClient({ apiKey });
 const accepts = [buildPaymentRequirements({ network, asset, amount, payTo })];

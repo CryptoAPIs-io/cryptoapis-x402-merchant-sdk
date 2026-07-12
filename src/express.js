@@ -1,7 +1,7 @@
 /**
  * Express middleware for x402 — monetize a route in ~3 lines:
  *
- *   import { paymentMiddleware } from '@cryptoapis/x402-merchant-sdk/express';
+ *   import { paymentMiddleware } from '@cryptoapis-io/x402-merchant-sdk/express';
  *   const pay = paymentMiddleware({ apiKey: process.env.CRYPTOAPIS_API_KEY, payTo: '0x…' });
  *   app.get('/premium', pay({ network: 'eip155:8453', asset: USDC, amount: '10000' }), handler);
  *
