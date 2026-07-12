@@ -70,11 +70,13 @@ async function runPaymentGate({ paymentHeader, accepts, facilitator, settle = tr
         };
     }
 
-    // Match the presented payment to one of the acceptable requirements by (scheme,
-    // network) — a merchant may offer several assets/networks; the buyer picks one.
-    const requirements = accepts.find(
-        (r) => r.scheme === payload.scheme && r.network === payload.network
-    ) ?? accepts[0];
+    // Match the presented payment to one of the acceptable requirements by NETWORK.
+    // The wire `paymentPayload.scheme` is ALWAYS `exact` (the family is carried by
+    // `network`, per the facilitator's parseEnvelope) — so scheme can't disambiguate;
+    // network is the pairing key. A merchant offering >1 asset on the SAME network
+    // should list the fuller-priced/native asset first (the buyer picks a network,
+    // the facilitator validates the asset against that requirement).
+    const requirements = accepts.find((r) => r.network === payload.network) ?? accepts[0];
 
     const verifyResult = await facilitator.verify({
         paymentRequirements: requirements,
