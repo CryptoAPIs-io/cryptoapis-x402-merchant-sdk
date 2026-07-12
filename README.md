@@ -38,6 +38,26 @@ A buyer's agent hits `/premium`, gets `402` + the `accepts` list, has its wallet
 locally (e.g. via `@cryptoapis-io/mcp-signer`), and retries with the `X-PAYMENT` header. The middleware
 verifies + settles and, on success, sets `X-PAYMENT-RESPONSE` (the settlement receipt) and calls `next()`.
 
+## Other frameworks — Hono & Next.js
+
+Same core, thin adapters:
+
+```js
+// Hono
+import { paymentMiddleware } from '@cryptoapis/x402-merchant-sdk/hono';
+const pay = paymentMiddleware({ apiKey, payTo: '0x…' });
+app.get('/premium', pay({ network: 'eip155:8453', asset: USDC_BASE, amount: '10000' }),
+    (c) => c.json({ paidBy: c.get('x402').payer }));
+
+// Next.js (App Router route handler)
+import { withX402 } from '@cryptoapis/x402-merchant-sdk/next';
+const pay = withX402({ apiKey, payTo: '0x…' });
+export const GET = pay(
+    { network: 'eip155:8453', asset: USDC_BASE, amount: '10000' },
+    async (req, x402) => Response.json({ paidBy: x402.payer }),
+);
+```
+
 ## Multiple assets / networks
 
 Pass an array to offer the buyer a choice (the 402 `accepts` list):
