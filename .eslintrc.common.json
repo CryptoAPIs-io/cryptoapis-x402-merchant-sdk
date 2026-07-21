@@ -1,0 +1,107 @@
+{
+  "extends": ["standard", "plugin:jsdoc/recommended-error"],
+  "env": {
+    "node": true
+  },
+  "parserOptions": {
+    "impliedStrict": true
+  },
+  "plugins": [
+    "jsdoc"
+  ],
+  "settings": {
+    "jsdoc": {
+      "tagNamePreference": {
+        "returns": "return"
+      },
+      "preferredTypes": {
+        "object": "Object",
+        "[]": false
+      }
+    }
+  },
+  "rules": {
+    "indent": ["error", 4, {"SwitchCase": 1}],
+    "semi": ["error", "always"],
+    "space-before-function-paren": ["error", {"anonymous": "always", "named": "never", "asyncArrow": "always"}],
+    "comma-dangle": ["error", {
+      "arrays": "only-multiline",
+      "objects": "only-multiline",
+      "imports": "only-multiline",
+      "exports": "only-multiline",
+      "functions": "never"
+    }],
+    "padded-blocks": ["error", {"classes": "never", "blocks":  "never", "switches":  "never"}, {"allowSingleLineBlocks": true }],
+    "space-unary-ops": ["error", {
+      "words": true,
+      "nonwords": false,
+      "overrides": {
+        "new": true,
+        "+": true
+      }
+    }],
+    "object-curly-spacing": ["error", "always", {
+      "arraysInObjects": false,
+      "objectsInObjects": true
+    }],
+    "object-shorthand":["error", "consistent"],
+    "quotes": ["error", "single", {
+      "avoidEscape": true,
+      "allowTemplateLiterals": true
+    }],
+    "one-var-declaration-per-line": ["error", "always"],
+    "one-var": ["error", {"separateRequires":  true}],
+    "comma-style": ["error", "last", {
+      "exceptions": {
+        "VariableDeclaration": true
+      }
+    }],
+    "dot-notation": ["off"],
+    "no-prototype-builtins": ["off"],
+    "no-unneeded-ternary": ["error", {"defaultAssignment":  true}],
+    "no-trailing-spaces": ["error", {"skipBlankLines":  true}],
+    "valid-typeof": ["error", {"requireStringLiterals": false}],
+    "object-property-newline": ["error", {"allowAllPropertiesOnSameLine":  false}],
+    "function-call-argument-newline": ["error", "consistent"],
+    "object-curly-newline": ["error", {
+      "ObjectExpression": {"multiline": true, "minProperties": 2, "consistent":  true},
+      "ImportDeclaration": {"multiline": true, "minProperties": 2, "consistent":  true},
+      "ExportDeclaration": {"multiline": true, "minProperties": 2, "consistent":  true}
+    }],
+    "camelcase": ["error", {"properties": "always"}],
+    "new-cap": ["error", { "newIsCapExceptionPattern": "^this\\." }],
+    "quote-props": ["error", "consistent-as-needed"],
+    "no-case-declarations": ["off"],
+    "jsdoc/check-examples": ["off"],
+    "jsdoc/require-property-description": ["off"],
+    "jsdoc/require-returns-description": ["off"],
+    "jsdoc/require-param-description": ["off"],
+    "jsdoc/no-undefined-types": ["error"],
+    "jsdoc/require-returns-check": ["off"],
+    "jsdoc/require-param": ["error", {
+      "enableRootFixer": true,
+      "enableFixer": true,
+      "unnamedRootBase": ["param", "arg", "attr"]
+    }],
+    "jsdoc/require-jsdoc": ["error", {
+      "require": {
+        "ArrowFunctionExpression": false,
+        "ClassDeclaration": false,
+        "ClassExpression": true,
+        "FunctionDeclaration": true,
+        "MethodDefinition": true
+      }
+    }],
+    "jsdoc/require-returns": ["error", {"forceRequireReturn": true, "forceReturnsWithAsync": true}],
+    "jsdoc/require-asterisk-prefix": ["error", "always"],
+    "jsdoc/tag-lines": ["error", "never", {
+      "startLines": null,
+      "endLines": 0,
+      "applyToEndTag": false
+    }],
+    "jsdoc/match-description": ["error", {
+      "matchDescription": "(?!\\s*$).*\n$",
+      "message": "Description should not be an empty line and should be followed by an empty line if not empty."
+    }]
+  }
+}

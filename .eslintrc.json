@@ -1,6 +1,6 @@
 {
     "root": true,
-    "extends": "@common/eslint-config-nodejs",
+    "extends": "./.eslintrc.common.json",
     "parserOptions": {
         "ecmaVersion": 2022,
         "sourceType": "module"
