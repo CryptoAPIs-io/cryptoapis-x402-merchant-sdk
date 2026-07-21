@@ -51,6 +51,6 @@ npm run lint      # eslint (@common config; tests relax jsdoc/object-shorthand)
 Tests live under `tests/`, never colocated.
 
 ## Status
-Code-only (built + unit-tested, 20 tests; not published). v1: EVM/SVM/all-families via the facilitator's
+Code-only (built + unit-tested, 25 tests; not published). v1: EVM/SVM/all-families via the facilitator's
 family dispatch — the SDK is family-agnostic (it just relays paymentRequirements+payload). Later:
 `x402-next` / `x402-hono` adapters (same core, new thin wrappers).

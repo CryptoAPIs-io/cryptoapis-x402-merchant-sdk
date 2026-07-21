@@ -1,0 +1,17 @@
+{
+  "// note": "Declaration-only: this package ships plain ESM JS (no transpile). tsc reads the JSDoc in src/*.js and emits .d.ts type declarations into types/ so TS consumers get autocomplete. `npm run build:types` regenerates them; prepublishOnly runs it so the published tarball always has fresh types.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "types",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "strict": false,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.js"],
+  "exclude": ["node_modules", "tests"]
+}

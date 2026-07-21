@@ -24,20 +24,35 @@
   "type": "module",
   "main": "src/index.js",
   "exports": {
-    ".": "./src/index.js",
-    "./express": "./src/express.js",
-    "./hono": "./src/hono.js",
-    "./next": "./src/next.js"
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./express": {
+      "types": "./types/express.d.ts",
+      "import": "./src/express.js"
+    },
+    "./hono": {
+      "types": "./types/hono.d.ts",
+      "import": "./src/hono.js"
+    },
+    "./next": {
+      "types": "./types/next.d.ts",
+      "import": "./src/next.js"
+    }
   },
   "files": [
-    "src"
+    "src",
+    "types"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "test": "node --test \"tests/**/*.test.js\"",
-    "lint": "eslint ./src/ ./tests/"
+    "lint": "eslint ./src/ ./tests/",
+    "prepublishOnly": "npm run lint && npm test && npm run build:types",
+    "build:types": "tsc"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
@@ -45,6 +60,11 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsdoc": "^46.10.1",
     "eslint-plugin-n": "^16.6.2",
-    "eslint-plugin-promise": "^6.6.0"
-  }
+    "eslint-plugin-promise": "^6.6.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "types": "./types/index.d.ts"
 }
