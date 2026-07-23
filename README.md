@@ -85,6 +85,27 @@ const result = await runPaymentGate({
 // result.outcome: 'payment-required' | 'paid' | 'invalid'
 ```
 
+### Corporate proxies / custom CA
+
+Behind a TLS-intercepting corporate proxy, Node's global `fetch` fails with
+`UNABLE_TO_GET_ISSUER_CERT_LOCALLY`. `createFacilitatorClient` accepts a **`fetchImpl`** — pass a `fetch`
+bound to your CA / proxy agent (e.g. `undici`) so `/verify` + `/settle` route through it; the
+`paymentMiddleware` / `runPaymentGate` then take that client via `facilitator`:
+
+```js
+import { fetch as undiciFetch, Agent } from 'undici';
+import { readFileSync } from 'node:fs';
+
+const agent = new Agent({ connect: { ca: readFileSync('/etc/corp/ca.pem') } });
+const facilitator = createFacilitatorClient({
+  apiKey,
+  fetchImpl: (url, init) => undiciFetch(url, { ...init, dispatcher: agent }),
+});
+// pass `facilitator` to paymentMiddleware({ facilitator }) / runPaymentGate({ facilitator })
+```
+
+Inject the CA — never disable TLS verification globally.
+
 ---
 
 ## Offer multiple assets / networks
