@@ -11,9 +11,7 @@ name: Publish to npm (with provenance)
 #   - id-token: write — OIDC, so npm can mint the provenance attestation.
 #   - The release tag SHOULD match the package.json version (e.g. v0.1.0).
 #
-# PUBLISH ORDER: this SDK has no runtime deps, so it can publish independently. But
-# the x402-agent-plugin depends on the sibling packages being on npm — see the
-# publish runbook in CLAUDE.md ("Publish order").
+# This SDK has no runtime deps, so it can publish independently.
 
 on:
   release:

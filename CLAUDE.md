@@ -39,8 +39,7 @@ facilitator.
 ## Facilitator contract (what this calls)
 `ai.cryptoapis.io/x402/merchant/{verify,settle,supported}`, `x-api-key` = the merchant's CryptoAPIs key
 with the `X402_FACILITATOR` feature. `/verify` → `{isValid, payer, invalidReason?}`; `/settle` →
-`{success, payer, transaction, network, errorReason?}`. See `cryptoapis-x402-facilitator` + KB
-`functional/x402-facilitator`.
+`{success, payer, transaction, network, errorReason?}`.
 
 ## Commands
 ```bash
