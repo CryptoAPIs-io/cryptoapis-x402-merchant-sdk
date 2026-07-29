@@ -1,7 +1,7 @@
 {
   "name": "@cryptoapis-io/x402-merchant-sdk",
-  "version": "0.2.0",
-  "description": "CryptoAPIs x402 merchant SDK \u2014 monetize any API per-request with the x402 protocol via the CryptoAPIs facilitator (framework-agnostic core + Express middleware).",
+  "version": "0.3.0",
+  "description": "CryptoAPIs x402 merchant SDK — monetize any API per-request with the x402 protocol via the CryptoAPIs facilitator (framework-agnostic core + Express middleware).",
   "license": "MIT",
   "author": "Crypto APIs, Inc.",
   "repository": {
