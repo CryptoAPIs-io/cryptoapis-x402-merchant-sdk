@@ -136,6 +136,10 @@ the payment in `_meta["x402/payment"]`, and the paid result carries the receipt 
 Your handler **only ever runs once payment has settled** — an unpaid or failed call never reaches it, so a
 merchant never does the work for free.
 
+**Runnable example:** [`examples/mcp-paid-tool/`](examples/mcp-paid-tool/) — a complete MCP server with one
+paid tool. `npm install && npm start`. The buyer half (an agent that pays tools like it) is
+[`@cryptoapis-io/x402-buyer-sdk/mcp`](https://www.npmjs.com/package/@cryptoapis-io/x402-buyer-sdk).
+
 ---
 
 ## Offer multiple assets / networks
