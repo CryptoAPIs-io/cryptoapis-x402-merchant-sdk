@@ -18,7 +18,7 @@ const DEFAULT_BASE_URL = 'https://ai.cryptoapis.io/x402/merchant';
  * @param {string} params.apiKey the merchant's CryptoAPIs API key (X402_FACILITATOR feature)
  * @param {string} [params.baseUrl] override the facilitator base URL (e.g. QA/local)
  * @param {Function} [params.fetchImpl] fetch implementation (injectable for tests)
- * @return {{verify: Function, settle: Function, supported: Function}} the client
+ * @return {{verify: Function, settle: Function, supported: Function, discovery: Function}} the client
  */
 function createFacilitatorClient({ apiKey, baseUrl = DEFAULT_BASE_URL, fetchImpl } = {}) {
     if (!apiKey) {
@@ -81,17 +81,53 @@ function createFacilitatorClient({ apiKey, baseUrl = DEFAULT_BASE_URL, fetchImpl
             });
         },
         /**
-         * Discover the facilitator's supported {x402Version, scheme, network} kinds + signers.
+         * Discover what the facilitator can settle: the `{x402Version, scheme, network}`
+         * kinds, the extension identifiers it implements, and its public signer addresses
+         * keyed by CAIP-2 namespace pattern (`eip155:*`, `solana:*`).
          *
-         * @return {Promise<{kinds: Array<Object>, signers: Object}>} the /supported body
+         * PUBLIC — sends no API key. `/supported` is the protocol's discovery endpoint, so
+         * it must be readable before you hold a credential; requiring one here would stop a
+         * merchant checking whether we serve their chain before signing up.
+         *
+         * @return {Promise<{kinds: Array<Object>, extensions: Array<string>, signers: Object}>} the /supported body
          */
         async supported() {
-            const res = await doFetch(`${root}/supported`, {
-                method: 'GET',
-                headers: { 'x-api-key': apiKey },
-            });
+            const res = await doFetch(`${root}/supported`, { method: 'GET' });
             if (!res.ok) {
                 throw new Error(`facilitator /supported failed: ${res.status}`);
+            }
+            return res.json();
+        },
+
+        /**
+         * Browse the facilitator's Bazaar catalogue (x402 v2 §8) — the x402-enabled
+         * resources registered behind it, with the payment requirements each accepts, so a
+         * client can find an API and read its price before calling it.
+         *
+         * PUBLIC, like `/supported`: a catalogue you need a credential to read is not a
+         * catalogue.
+         *
+         * @param {Object} [query] paging/filter
+         * @param {string} [query.type] resource type filter (e.g. `'http'`)
+         * @param {number} [query.limit] page size, 1-100 (default 20)
+         * @param {number} [query.offset] rows to skip (default 0)
+         * @return {Promise<{x402Version: number, items: Array<Object>, pagination: Object}>} the catalogue page
+         */
+        async discovery({ type, limit, offset } = {}) {
+            const params = new URLSearchParams();
+            if (type !== undefined) {
+                params.set('type', String(type));
+            }
+            if (limit !== undefined) {
+                params.set('limit', String(limit));
+            }
+            if (offset !== undefined) {
+                params.set('offset', String(offset));
+            }
+            const qs = params.toString();
+            const res = await doFetch(`${root}/discovery/resources${qs ? `?${qs}` : ''}`, { method: 'GET' });
+            if (!res.ok) {
+                throw new Error(`facilitator /discovery/resources failed: ${res.status}`);
             }
             return res.json();
         },

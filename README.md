@@ -133,6 +133,49 @@ app.get('/premium', pay([
 A facilitator/transport error is surfaced as an error (`next(err)` / a thrown error), **not** a `402` — a
 failing dependency is the merchant's problem, not the buyer's.
 
+### Failure reasons are x402 standard codes
+
+`invalidReason` (verify) and `errorReason` (settle) are the codes from
+[x402 v2 §9](https://github.com/coinbase/x402/blob/main/specs/x402-specification-v2.md), so you can branch
+on them the same way you would against any x402 facilitator — `invalid_exact_evm_payload_signature`,
+`invalid_exact_evm_payload_authorization_valid_before`, `insufficient_funds`, `invalid_network`,
+`invalid_transaction_state`, and so on.
+
+Where CryptoAPIs refuses for a reason the spec does not model — an AML screen, the travel-rule cap, an
+asset that is not enabled — you still get a **standard** code plus an `invalidDetail` / `errorDetail`
+naming the real cause:
+
+```json
+{ "isValid": false, "invalidReason": "invalid_payment_requirements", "invalidDetail": "aml_rejected" }
+```
+
+Branch on the standard code; log the detail.
+
+---
+
+## Discovery — before you integrate
+
+Both endpoints are **public**: no API key, so you can check we serve your chain before signing up.
+
+```js
+import { createFacilitatorClient } from '@cryptoapis-io/x402-merchant-sdk';
+
+const fac = createFacilitatorClient({ apiKey: process.env.CRYPTOAPIS_API_KEY });
+
+// What can this facilitator settle?
+const { kinds, extensions, signers } = await fac.supported();
+// kinds      → [{ x402Version: 2, scheme: 'exact', network: 'eip155:8453' }, …]
+// extensions → ['payment-identifier']
+// signers    → { 'eip155:*': ['0x…'], 'solana:*': ['9BD…'] }   (CAIP-2 namespace patterns)
+
+// What is already for sale behind it? (the x402 "Bazaar", spec §8)
+const { items, pagination } = await fac.discovery({ type: 'http', limit: 20 });
+```
+
+`signers` is keyed by **CAIP-2 namespace pattern** (`eip155:*`), not by concrete network — one signer
+pool serves every chain in its namespace. A namespace listed with an empty array is served
+*broadcast-only*: the buyer signs and pays their own fee, and the facilitator holds no key for it.
+
 ---
 
 ## Configuration

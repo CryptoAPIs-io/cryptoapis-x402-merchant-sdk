@@ -123,4 +123,77 @@ test('supported GETs /supported', async () => {
         signers: {}
     });
     assert.equal(fetchImpl.calls[0].opts.method, 'GET');
+    // PUBLIC endpoint: sending a key here would stop a merchant checking whether we
+    // serve their chain BEFORE they sign up.
+    assert.equal(fetchImpl.calls[0].opts.headers, undefined);
+});
+
+test('supported surfaces the spec-required extensions array', async () => {
+    const fetchImpl = mockFetch({
+        kinds: [],
+        extensions: ['payment-identifier'],
+        signers: { 'eip155:*': ['0xGAS']}
+    });
+    const c = createFacilitatorClient({
+        apiKey: 'K',
+        baseUrl: 'https://fac/x402/merchant',
+        fetchImpl
+    });
+    const res = await c.supported();
+    assert.deepEqual(res.extensions, ['payment-identifier']);
+    // signers are keyed by CAIP-2 NAMESPACE pattern, not concrete network.
+    assert.ok(res.signers['eip155:*']);
+});
+
+test('discovery GETs the Bazaar catalogue with no api key', async () => {
+    const fetchImpl = mockFetch({
+        x402Version: 2,
+        items: [],
+        pagination: {
+            limit: 20,
+            offset: 0,
+            total: 0
+        }
+    });
+    const c = createFacilitatorClient({
+        apiKey: 'K',
+        baseUrl: 'https://fac/x402/merchant',
+        fetchImpl
+    });
+    const res = await c.discovery();
+    assert.equal(res.x402Version, 2);
+    assert.equal(fetchImpl.calls[0].url, 'https://fac/x402/merchant/discovery/resources');
+    assert.equal(fetchImpl.calls[0].opts.headers, undefined);
+});
+
+test('discovery passes paging + type through as query params', async () => {
+    const fetchImpl = mockFetch({
+        x402Version: 2,
+        items: [],
+        pagination: {}
+    });
+    const c = createFacilitatorClient({
+        apiKey: 'K',
+        baseUrl: 'https://fac/x402/merchant',
+        fetchImpl
+    });
+    await c.discovery({
+        type: 'http',
+        limit: 5,
+        offset: 10
+    });
+    assert.equal(
+        fetchImpl.calls[0].url,
+        'https://fac/x402/merchant/discovery/resources?type=http&limit=5&offset=10'
+    );
+});
+
+test('discovery throws on a non-2xx', async () => {
+    const fetchImpl = mockFetch({}, 503);
+    const c = createFacilitatorClient({
+        apiKey: 'K',
+        baseUrl: 'https://fac/x402/merchant',
+        fetchImpl
+    });
+    await assert.rejects(() => c.discovery(), /discovery\/resources failed: 503/);
 });

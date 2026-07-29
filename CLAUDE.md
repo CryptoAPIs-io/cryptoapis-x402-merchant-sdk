@@ -15,8 +15,11 @@ facilitator.
 
 ## Modules (`src/`)
 - `facilitatorClient.js` — `createFacilitatorClient({apiKey, baseUrl, fetchImpl})` → `verify`/`settle`/
-  `supported`. Uses global `fetch` (injectable for tests). A **non-2xx throws** (transport/auth error);
-  a protocol failure is HTTP 200 with `isValid/success:false` — the caller inspects the body.
+  `supported`/`discovery`. Uses global `fetch` (injectable for tests). A **non-2xx throws**
+  (transport/auth error); a protocol failure is HTTP 200 with `isValid/success:false` — the caller
+  inspects the body. **`supported` and `discovery` send NO api key** — both facilitator endpoints are
+  public so a merchant can check we serve their chain before onboarding; adding auth there would defeat
+  the point of a discovery endpoint.
 - `paymentRequirements.js` — `buildPaymentRequirements` (`{scheme, network, amount, asset, payTo,
    maxTimeoutSeconds, extra}`) + `build402Body` (`{x402Version:2, accepts, error?}`). Amounts are ATOMIC
    units; networks are CAIP-2.
@@ -37,9 +40,17 @@ facilitator.
 - **Zero runtime deps.** Uses global `fetch` + `Buffer` only, so it drops into any Node 18+ service.
 
 ## Facilitator contract (what this calls)
-`ai.cryptoapis.io/x402/merchant/{verify,settle,supported}`, `x-api-key` = the merchant's CryptoAPIs key
-with the `X402_FACILITATOR` feature. `/verify` → `{isValid, payer, invalidReason?}`; `/settle` →
-`{success, payer, transaction, network, errorReason?}`.
+`ai.cryptoapis.io/x402/merchant/{verify,settle,supported,discovery/resources}`. `x-api-key` (the
+merchant's CryptoAPIs key with the `X402_FACILITATOR` feature) is required on **`/verify` + `/settle`
+only**; `/supported` and `/discovery/resources` are public. `/verify` → `{isValid, payer,
+invalidReason?}`; `/settle` → `{success, payer, transaction, network, errorReason?, amount?}`;
+`/supported` → `{kinds, extensions, signers}` (signers keyed by CAIP-2 namespace pattern);
+`/discovery/resources` → `{x402Version, items, pagination}`.
+
+**Reason codes on the wire are the x402 v2 §9 STANDARD codes**, not CryptoAPIs-internal ones — the
+facilitator translates at its boundary. Refusals the spec does not model (AML, travel rule, asset
+gating) map to a standard code and carry the precise cause in `invalidDetail`/`errorDetail`. Branch on
+the standard code; log the detail.
 
 ## Commands
 ```bash
