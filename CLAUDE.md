@@ -23,15 +23,26 @@ facilitator.
 - `paymentRequirements.js` — `buildPaymentRequirements` (`{scheme, network, amount, asset, payTo,
    maxTimeoutSeconds, extra}`) + `build402Body` (`{x402Version:2, accepts, error?}`). Amounts are ATOMIC
    units; networks are CAIP-2.
-- `paymentGate.js` — **the framework-agnostic core.** `runPaymentGate({paymentHeader, accepts,
-   facilitator, settle})` → `{outcome: 'payment-required'|'paid'|'invalid', status, body?, headers?,
-   payer?, settlement?}`. Decodes the base64 `X-PAYMENT`, matches it to an `accepts` entry by
-   `(scheme, network)`, verifies, then settles. Verify-fail short-circuits (never settles).
+- `paymentGate.js` — **the transport-agnostic core.** `runPaymentGate({paymentHeader | payment,
+   accepts, resource, facilitator, settle})` → `{outcome: 'payment-required'|'paid'|'invalid', status,
+   body?, headers?, payer?, settlement?}`. Takes EITHER the base64 `X-PAYMENT` header (HTTP) or an
+   already-decoded `payment` object (MCP, which carries structured JSON in `_meta`), matches it to an
+   `accepts` entry by NETWORK, verifies, then settles. Verify-fail short-circuits (never settles).
+   `status`/`headers` are HTTP hints a non-HTTP adapter simply ignores.
 - `express.js` (`/express` export) — `paymentMiddleware({apiKey, payTo, baseUrl, settle, facilitator})`
    → `pay(priceSpec | priceSpec[])` → Express middleware. On paid: `req.x402 = {payer, settlement}` +
    `next()`. On 402: sends the body. On a facilitator transport error: `next(err)` (502-class, NOT 402 —
    the buyer did nothing wrong).
-- `index.js` — barrel (core only; the Express adapter is the `/express` subpath export).
+- `mcp.js` (`/mcp` export) — **MCP transport adapter** (specs/transports-v2/mcp.md).
+   `paymentTool({apiKey, payTo, …})` → `payTool(toolName, price, handler)` → a wrapped MCP tool
+   handler. Three deltas from HTTP, all spec-mandated: payment-required is a tool RESULT
+   (`isError:true`) carrying PaymentRequired in BOTH `structuredContent` AND `content[0].text`
+   (identical data, for clients that can't read structured content); the payment arrives as a RAW
+   OBJECT in `_meta["x402/payment"]` (no base64 — hence `runPaymentGate` accepting a pre-decoded
+   `payment`); the receipt goes back in `_meta["x402/payment-response"]`. `resource.url` is
+   `mcp://tool/<name>`. The handler runs ONLY after settlement, so a failed settle can never leak
+   the tool's output — the spec's "do not return the tool's content" rule holds by construction.
+- `index.js` — barrel (core only; adapters are subpath exports).
 
 ## Non-negotiable
 - **Non-custodial.** No keys, no signing, ever. The buyer signs; the facilitator's gas wallet settles.

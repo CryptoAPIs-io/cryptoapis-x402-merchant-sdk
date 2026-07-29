@@ -51,7 +51,9 @@ function encodePaymentResponse(settleResult) {
  * Run the x402 gate for a single request.
  *
  * @param {Object} params inputs
- * @param {(string|undefined)} params.paymentHeader the raw `X-PAYMENT` request header
+ * @param {(string|undefined)} [params.paymentHeader] the raw base64 `X-PAYMENT` request header (HTTP)
+ * @param {(Object|null)} [params.payment] an ALREADY-DECODED PaymentPayload (MCP, which carries
+ *   it as structured JSON in `_meta` — pass this instead of paymentHeader)
  * @param {Array<Object>} params.accepts the acceptable PaymentRequirements for this resource
  * @param {Object} params.resource REQUIRED ResourceInfo `{url, description?, mimeType?}` for the
  *   protected resource — x402 v2 §5.1.2 makes it mandatory on every PaymentRequired body
@@ -59,8 +61,11 @@ function encodePaymentResponse(settleResult) {
  * @param {boolean} [params.settle] settle on-chain when true (default true); false = verify-only (advisory)
  * @return {Promise<{outcome: 'payment-required'|'paid'|'invalid', status: number, body?: Object, headers?: Object, payer?: string, settlement?: Object, reason?: string, requirements?: Object}>} the gate decision
  */
-async function runPaymentGate({ paymentHeader, accepts, resource, facilitator, settle = true }) {
-    const payload = decodePaymentHeader(paymentHeader);
+async function runPaymentGate({ paymentHeader, payment, accepts, resource, facilitator, settle = true }) {
+    // HTTP hands us a base64 header; MCP already has the PaymentPayload as a plain object
+    // (it rides in `_meta`, and the transport carries structured JSON natively). Accept
+    // either so both transports share this core untouched.
+    const payload = payment ?? decodePaymentHeader(paymentHeader);
     if (!payload) {
         return {
             outcome: 'payment-required',

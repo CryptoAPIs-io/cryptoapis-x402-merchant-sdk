@@ -108,6 +108,36 @@ Inject the CA — never disable TLS verification globally.
 
 ---
 
+## MCP — charge for an AI-agent tool
+
+Agents call **MCP tools**, not HTTP endpoints. The `/mcp` adapter monetizes a tool with the same core:
+
+```js
+import { paymentTool } from '@cryptoapis-io/x402-merchant-sdk/mcp';
+
+const pay = paymentTool({
+  apiKey: process.env.CRYPTOAPIS_API_KEY,
+  payTo:  '0xYourReceivingAddress',
+});
+
+// Base USDC, $0.01 — wrap the handler you already have.
+server.registerTool('financial_analysis', schema, pay(
+  'financial_analysis',
+  { network: 'eip155:8453', asset: USDC_BASE, amount: '10000' },
+  async (args) => ({ content: [{ type: 'text', text: analyse(args.ticker) }] })
+));
+```
+
+Unpaid calls get a tool result with `isError: true` carrying the `PaymentRequired` in **both**
+`structuredContent` and `content[0].text` (the transport spec requires both). The agent pays, retries with
+the payment in `_meta["x402/payment"]`, and the paid result carries the receipt in
+`_meta["x402/payment-response"]`.
+
+Your handler **only ever runs once payment has settled** — an unpaid or failed call never reaches it, so a
+merchant never does the work for free.
+
+---
+
 ## Offer multiple assets / networks
 
 Pass an array — the buyer picks one (it becomes the `accepts` list in the 402):
