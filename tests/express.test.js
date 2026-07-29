@@ -52,7 +52,12 @@ test('no payment → 402 with accepts body, next NOT called', async () => {
     });
     const res = mockRes();
     let nexted = false;
-    await mw({ headers: {} }, res, () => { nexted = true; });
+    await mw({
+        headers: {},
+        protocol: 'https',
+        get: () => 'api.example.test',
+        originalUrl: '/premium'
+    }, res, () => { nexted = true; });
     assert.equal(res._status, 402);
     assert.equal(res._json.accepts[0].payTo, '0xMerchant');
     assert.equal(res._json.accepts[0].amount, '10000');
@@ -82,7 +87,12 @@ test('valid payment → settle → next() + req.x402 + X-PAYMENT-RESPONSE header
         asset: USDC,
         amount: '10000'
     });
-    const req = { headers: { 'x-payment': payHeader(validPayload) } };
+    const req = {
+        headers: { 'x-payment': payHeader(validPayload) },
+        protocol: 'https',
+        get: () => 'api.example.test',
+        originalUrl: '/premium'
+    };
     const res = mockRes();
     let nexted = false;
     await mw(req, res, () => { nexted = true; });
@@ -112,7 +122,12 @@ test('invalid payment → 402, next NOT called', async () => {
     });
     const res = mockRes();
     let nexted = false;
-    await mw({ headers: { 'x-payment': payHeader(validPayload) } }, res, () => { nexted = true; });
+    await mw({
+        headers: { 'x-payment': payHeader(validPayload) },
+        protocol: 'https',
+        get: () => 'api.example.test',
+        originalUrl: '/premium'
+    }, res, () => { nexted = true; });
     assert.equal(res._status, 402);
     assert.equal(res._json.error, 'expired');
     assert.equal(nexted, false);
@@ -131,7 +146,12 @@ test('per-route payTo overrides the default', async () => {
         payTo: '0xRouteSpecific'
     });
     const res = mockRes();
-    await mw({ headers: {} }, res, () => {});
+    await mw({
+        headers: {},
+        protocol: 'https',
+        get: () => 'api.example.test',
+        originalUrl: '/premium'
+    }, res, () => {});
     assert.equal(res._json.accepts[0].payTo, '0xRouteSpecific');
 });
 
@@ -152,7 +172,12 @@ test('a facilitator transport error → next(err) (502-class, not 402)', async (
     });
     const res = mockRes();
     let err;
-    await mw({ headers: { 'x-payment': payHeader(validPayload) } }, res, (e) => { err = e; });
+    await mw({
+        headers: { 'x-payment': payHeader(validPayload) },
+        protocol: 'https',
+        get: () => 'api.example.test',
+        originalUrl: '/premium'
+    }, res, (e) => { err = e; });
     assert.ok(err instanceof Error);
     assert.match(err.message, /facilitator/);
     assert.equal(res._status, null); // did not send a 402

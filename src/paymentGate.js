@@ -53,11 +53,13 @@ function encodePaymentResponse(settleResult) {
  * @param {Object} params inputs
  * @param {(string|undefined)} params.paymentHeader the raw `X-PAYMENT` request header
  * @param {Array<Object>} params.accepts the acceptable PaymentRequirements for this resource
+ * @param {Object} params.resource REQUIRED ResourceInfo `{url, description?, mimeType?}` for the
+ *   protected resource — x402 v2 §5.1.2 makes it mandatory on every PaymentRequired body
  * @param {Object} params.facilitator a facilitatorClient (verify/settle)
  * @param {boolean} [params.settle] settle on-chain when true (default true); false = verify-only (advisory)
  * @return {Promise<{outcome: 'payment-required'|'paid'|'invalid', status: number, body?: Object, headers?: Object, payer?: string, settlement?: Object, reason?: string, requirements?: Object}>} the gate decision
  */
-async function runPaymentGate({ paymentHeader, accepts, facilitator, settle = true }) {
+async function runPaymentGate({ paymentHeader, accepts, resource, facilitator, settle = true }) {
     const payload = decodePaymentHeader(paymentHeader);
     if (!payload) {
         return {
@@ -65,6 +67,7 @@ async function runPaymentGate({ paymentHeader, accepts, facilitator, settle = tr
             status: 402,
             body: build402Body({
                 accepts: accepts,
+                resource: resource,
                 error: 'payment required'
             }),
         };
@@ -89,6 +92,7 @@ async function runPaymentGate({ paymentHeader, accepts, facilitator, settle = tr
             reason: verifyResult?.invalidReason ?? 'invalid_payment',
             body: build402Body({
                 accepts: accepts,
+                resource: resource,
                 error: verifyResult?.invalidReason ?? 'invalid payment'
             }),
         };
@@ -116,6 +120,7 @@ async function runPaymentGate({ paymentHeader, accepts, facilitator, settle = tr
             reason: settleResult?.errorReason ?? 'invalid_transaction_state',
             body: build402Body({
                 accepts: accepts,
+                resource: resource,
                 error: settleResult?.errorReason ?? 'settlement failed'
             }),
         };

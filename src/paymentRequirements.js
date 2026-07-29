@@ -42,23 +42,44 @@ function buildPaymentRequirements({
 }
 
 /**
- * Build the HTTP 402 response body a merchant returns when payment is required. The
- * x402 standard body carries `x402Version` + the `accepts` list of acceptable
- * PaymentRequirements (a merchant MAY offer more than one asset/network).
+ * Build the `PaymentRequired` body a merchant returns when payment is required — the HTTP
+ * 402 body, and the same object an MCP tool puts in `structuredContent` (the schema is
+ * transport-independent; only the envelope differs).
+ *
+ * Per x402 v2 §5.1.2 the REQUIRED fields are `x402Version`, `resource` and `accepts`;
+ * `error` and `extensions` are optional. `resource` is a ResourceInfo whose `url` is
+ * itself required — so both are enforced here rather than accepted as optional. Emitting a
+ * body without them would be non-conformant, and a client written against the spec may
+ * read `resource.url` unconditionally.
  *
  * @param {Object} params inputs
  * @param {Array<Object>} params.accepts one or more PaymentRequirements (see buildPaymentRequirements)
+ * @param {{url: string, description?: string, mimeType?: string}} params.resource REQUIRED
+ *   ResourceInfo describing what is being paid for. `url` is required (HTTP: the endpoint
+ *   url; MCP: `mcp://tool/<name>`); description/mimeType are optional.
  * @param {string} [params.error] optional human-readable reason (e.g. "payment required")
- * @return {{x402Version: number, accepts: Array<Object>, error?: string}} the 402 body
+ * @param {Object} [params.extensions] optional protocol extensions data
+ * @return {{x402Version: number, resource: Object, accepts: Array<Object>, error?: string, extensions?: Object}} the PaymentRequired body
  */
-function build402Body({ accepts, error }) {
+function build402Body({ accepts, resource, error, extensions }) {
     if (!Array.isArray(accepts) || accepts.length === 0) {
         throw new Error('build402Body: at least one accepts entry is required');
     }
+    // Fail loudly rather than emit a body missing a REQUIRED field: a silent omission is
+    // exactly how a non-conformant response reaches a client that then breaks on it.
+    if (!resource || typeof resource.url !== 'string' || resource.url === '') {
+        throw new Error('build402Body: resource.url is required (x402 v2 §5.1.2 — PaymentRequired.resource)');
+    }
     return {
         x402Version: 2,
+        resource: {
+            url: resource.url,
+            ...(resource.description ? { description: resource.description } : {}),
+            ...(resource.mimeType ? { mimeType: resource.mimeType } : {}),
+        },
         accepts: accepts,
         ...(error ? { error } : {}),
+        ...(extensions ? { extensions } : {}),
     };
 }
 

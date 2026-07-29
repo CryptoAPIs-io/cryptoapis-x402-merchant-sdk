@@ -40,6 +40,7 @@ const validPayload = {
 
 test('no X-PAYMENT header → payment-required (402 + accepts body)', async () => {
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: undefined,
         accepts: [reqs],
         facilitator: {}
@@ -52,6 +53,7 @@ test('no X-PAYMENT header → payment-required (402 + accepts body)', async () =
 
 test('empty header → payment-required', async () => {
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: '',
         accepts: [reqs],
         facilitator: {}
@@ -78,6 +80,7 @@ test('valid payment → verify + settle → paid (200 + X-PAYMENT-RESPONSE)', as
         },
     };
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: payHeader(validPayload),
         accepts: [reqs],
         facilitator
@@ -104,6 +107,7 @@ test('verify rejects → invalid (402, reason surfaced)', async () => {
         settle: async () => { throw new Error('settle must NOT be called when verify fails'); },
     };
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: payHeader(validPayload),
         accepts: [reqs],
         facilitator
@@ -126,6 +130,7 @@ test('verify ok but settle fails → invalid (settlement_failed)', async () => {
         }),
     };
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: payHeader(validPayload),
         accepts: [reqs],
         facilitator
@@ -144,6 +149,7 @@ test('settle fails with NO errorReason → falls back to the spec code', async (
         settle: async () => ({ success: false }),
     };
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: payHeader(validPayload),
         accepts: [reqs],
         facilitator
@@ -164,6 +170,7 @@ test('settle:false → verify-only advisory paid (no settle call)', async () => 
         settle: async () => { settleCalled = true; return {}; },
     };
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: payHeader(validPayload),
         accepts: [reqs],
         facilitator,
@@ -193,6 +200,7 @@ test('accepts-matching: picks the requirement whose scheme+network matches the p
     };
     // payload is EVM → must match the EVM requirement, not the Solana one
     await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: payHeader(validPayload),
         accepts: [solReqs, reqs],
         facilitator
@@ -202,6 +210,7 @@ test('accepts-matching: picks the requirement whose scheme+network matches the p
 
 test('malformed base64 header → treated as no payment (payment-required)', async () => {
     const res = await runPaymentGate({
+        resource: { url: 'https://api.example.test/premium' },
         paymentHeader: '!!!not-base64-json!!!',
         accepts: [reqs],
         facilitator: {}

@@ -41,6 +41,9 @@ function paymentMiddleware({ apiKey, payTo: defaultPayTo, baseUrl, settle = true
      */
     return function pay(price) {
         const specs = Array.isArray(price) ? price : [price];
+        // A merchant MAY state the resource explicitly (e.g. a stable public url, or to add
+        // description/mimeType); otherwise it is derived per-request below.
+        const resource = specs.find((s) => s.resource)?.resource;
         const accepts = specs.map((s) => buildPaymentRequirements({
             network: s.network,
             asset: s.asset,
@@ -55,6 +58,8 @@ function paymentMiddleware({ apiKey, payTo: defaultPayTo, baseUrl, settle = true
             const result = await runPaymentGate({
                 paymentHeader: c.req.header(PAYMENT_HEADER),
                 accepts: accepts,
+                // REQUIRED by x402 v2 §5.1.2 — derived from the live request.
+                resource: resource ?? { url: c.req.url },
                 facilitator: client,
                 settle: settle,
             });

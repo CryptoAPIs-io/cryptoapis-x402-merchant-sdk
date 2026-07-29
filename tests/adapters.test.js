@@ -52,7 +52,11 @@ function honoCtx(paymentHeaderValue) {
         _headers: {},
         _json: null,
         _status: null,
-        req: { header: (name) => (name === 'x-payment' ? paymentHeaderValue : undefined) },
+        req: {
+            header: (name) => (name === 'x-payment' ? paymentHeaderValue : undefined),
+            // the adapter derives the REQUIRED PaymentRequired.resource from the live request
+            url: 'https://api.example.test/premium'
+        },
         header(k, v) { this._headers[k] = v; },
         set(k, v) { store[k] = v; },
         get(k) { return store[k]; },
@@ -99,7 +103,10 @@ test('hono: paid → next(), c.set(x402), X-PAYMENT-RESPONSE header', async () =
 
 /** A Web Request double with a payment header (or none). */
 function nextReq(paymentHeaderValue) {
-    return { headers: { get: (name) => (name === 'x-payment' ? paymentHeaderValue : null) } };
+    return {
+        headers: { get: (name) => (name === 'x-payment' ? paymentHeaderValue : null) },
+        url: 'https://api.example.test/premium'
+    };
 }
 
 test('next: no payment → 402 Response (handler NOT called)', async () => {
