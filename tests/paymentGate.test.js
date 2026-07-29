@@ -134,6 +134,26 @@ test('verify ok but settle fails → invalid (settlement_failed)', async () => {
     assert.equal(res.reason, 'broadcast_rejected');
 });
 
+test('settle fails with NO errorReason → falls back to the spec code', async () => {
+    const facilitator = {
+        verify: async () => ({
+            isValid: true,
+            payer: '0xBuyer'
+        }),
+        // A facilitator that omits errorReason entirely (spec marks it Optional).
+        settle: async () => ({ success: false }),
+    };
+    const res = await runPaymentGate({
+        paymentHeader: payHeader(validPayload),
+        accepts: [reqs],
+        facilitator
+    });
+    assert.equal(res.outcome, 'invalid');
+    // The fallback must be a code from x402 v2 §9, not an invented one — a merchant
+    // branching on this string should never meet a non-standard value from us.
+    assert.equal(res.reason, 'invalid_transaction_state');
+});
+
 test('settle:false → verify-only advisory paid (no settle call)', async () => {
     let settleCalled = false;
     const facilitator = {

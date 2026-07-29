@@ -111,7 +111,9 @@ async function runPaymentGate({ paymentHeader, accepts, facilitator, settle = tr
         return {
             outcome: 'invalid',
             status: 402,
-            reason: settleResult?.errorReason ?? 'settlement_failed',
+            // Spec code (x402 v2 §9). Only a fallback — the facilitator normally supplies
+            // `errorReason` already translated; this covers a response that omits it.
+            reason: settleResult?.errorReason ?? 'invalid_transaction_state',
             body: build402Body({
                 accepts: accepts,
                 error: settleResult?.errorReason ?? 'settlement failed'
