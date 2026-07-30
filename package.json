@@ -43,6 +43,10 @@
     "./mcp": {
       "types": "./types/mcp.d.ts",
       "import": "./src/mcp.js"
+    },
+    "./a2a": {
+      "types": "./types/a2a.d.ts",
+      "import": "./src/a2a.js"
     }
   },
   "files": [

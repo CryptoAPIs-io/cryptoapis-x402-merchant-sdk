@@ -142,6 +142,39 @@ paid tool. `npm install && npm start`. The buyer half (an agent that pays tools 
 
 ---
 
+## A2A — charge another agent
+
+The third x402 transport. A2A is task-based, so payment is signalled by moving the task to
+`input-required` rather than by a status code:
+
+```js
+import { paymentSkill, agentCardExtension } from '@cryptoapis-io/x402-merchant-sdk/a2a';
+
+const pay = paymentSkill({ apiKey: process.env.CRYPTOAPIS_API_KEY, payTo: '0xYourAddress' });
+
+const generateImage = pay(
+  { url: 'https://api.example.com/generate-image', mimeType: 'image/png' },
+  { network: 'eip155:8453', asset: USDC_BASE, amount: '48240000' },
+  async (params) => ({ artifacts: [await render(params)] }),
+);
+```
+
+Declare the extension in your AgentCard so clients know you take payment:
+
+```js
+{ capabilities: { extensions: [agentCardExtension()] } }
+```
+
+Unpaid calls return a task in `input-required` carrying `PaymentRequired` under the metadata key
+`x402.payment.required`. The client pays in a new message under `x402.payment.payload`, correlated by
+`taskId`; the settled task completes with receipts in `x402.payment.receipts`.
+
+Note the metadata keys are **literal dotted strings** — `metadata["x402.payment.required"]`, not a
+nested `{x402:{payment:{…}}}` object. As with the other transports, your handler runs only after
+settlement.
+
+---
+
 ## Offer multiple assets / networks
 
 Pass an array — the buyer picks one (it becomes the `accepts` list in the 402):
