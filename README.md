@@ -8,8 +8,9 @@ stablecoin payment for you. Add it to a route in three lines.
 - 🪶 **Zero runtime dependencies** — pure `fetch` + `Buffer`. Node 18+ / edge / any modern runtime.
 - 🧩 **Express, Hono, Next.js** adapters + a framework-agnostic core.
 - 🌐 **Any x402 chain** — you just state a price; the facilitator handles EVM, Solana, and more.
-- 🪙 **No Solana token-account setup** — point `payTo` at any wallet, even one that has never
-  held the token. The facilitator creates the ATA and pays its rent. [Details](#solana-no-token-account-setup)
+- 🪙 **Solana token accounts are handled for you** — point `payTo` at any wallet, even one that has
+  never held the token and holds no SOL. The facilitator creates the ATA and pays the rent.
+  [Details](#solana-token-accounts-are-handled-for-you)
 
 ```bash
 npm install @cryptoapis-io/x402-merchant-sdk
@@ -189,17 +190,19 @@ app.get('/premium', pay([
 ]), handler);
 ```
 
-### Solana: no token-account setup
+### Solana token accounts are handled for you
+
+**CryptoAPIs takes care of Solana associated token accounts. You never create one.**
 
 On Solana a wallet cannot receive an SPL token until an **associated token account (ATA)**
 exists for that mint — normally the recipient's problem to solve, and to pay rent for,
-before anyone can pay them.
+before anyone can pay them. Every other x402 facilitator makes this your job.
 
-**You do not have to do this.** Point `payTo` at a plain Solana wallet address, even a
-brand-new one that has never held the token and holds no SOL. When a payment arrives and
-the account is missing, the CryptoAPIs facilitator creates it as part of the settlement
-transaction and **pays the rent** — the same way it pays the transaction fee. No
-`spl-token create-account`, no pre-funding, no SOL balance on your receiving address.
+Point `payTo` at a plain Solana wallet address, even a brand-new one that has never held
+the token and holds no SOL. When a payment arrives and the account is missing, the
+CryptoAPIs facilitator creates it as part of the settlement transaction and **pays the
+rent** — the same way it pays the transaction fee. No `spl-token create-account`, no
+pre-funding, no SOL balance on your receiving address, no setup step at all.
 
 ```js
 // A never-used Solana address works as payTo — nothing to set up first.
@@ -210,10 +213,11 @@ transaction and **pays the rent** — the same way it pays the transaction fee. 
 The account is created idempotently, so a merchant who already has an ATA is unaffected
 and pays nothing extra.
 
-> Scope: this is automatic for buyers paying through CryptoAPIs (the buyer SDK and the
-> CryptoAPIs buyer service). A third-party buyer that hand-builds its own Solana
-> transaction must include the create-ATA instruction itself — the facilitator accepts
-> and funds it, but cannot add an instruction to a transaction the buyer already signed.
+> One detail worth knowing: the facilitator funds the account creation, but the instruction
+> travels in the buyer's transaction. Buyers paying through CryptoAPIs get it automatically.
+> A buyer that hand-builds its own Solana transaction needs to include it — the facilitator
+> accepts and pays for it either way, but cannot add an instruction to an already-signed
+> transaction.
 
 ---
 
