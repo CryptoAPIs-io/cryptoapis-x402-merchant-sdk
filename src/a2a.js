@@ -22,7 +22,9 @@
  *  5. **Correlation is by `taskId`**, which the client must echo when submitting payment.
  */
 
-import { runPaymentGate } from './paymentGate.js';
+import {
+    runPaymentGate, normalizePayload
+} from './paymentGate.js';
 import { buildPaymentRequirements } from './paymentRequirements.js';
 import { createFacilitatorClient } from './facilitatorClient.js';
 
@@ -88,29 +90,8 @@ function readPaymentFromMessage(source) {
     return payment && typeof payment === 'object' ? payment : null;
 }
 
-/**
- * Normalize an A2A PaymentPayload to the flat form the gate matches on.
- *
- * The A2A wire form nests the chosen requirement under `accepted`; the gate pairs a payment to an
- * `accepts` entry by NETWORK, so lift `scheme`/`network` to the top when only `accepted` has them.
- * (The facilitator tolerates either, but the gate's matching must see the network.)
- *
- * @param {(Object|null)} payment the payload as it arrived
- * @return {(Object|null)} the payload with scheme/network at the top level
- */
-function normalizePayload(payment) {
-    if (!payment) {
-        return null;
-    }
-    if (payment.scheme && payment.network) {
-        return payment;
-    }
-    return {
-        ...payment,
-        scheme: payment.scheme ?? payment.accepted?.scheme,
-        network: payment.network ?? payment.accepted?.network,
-    };
-}
+// The payload normalizer (lifting scheme/network out of the `accepted` wrapper) is shared
+// with the HTTP gate — the A2A wire form and the x402 v2 HTTP form nest it identically.
 
 /**
  * Build the `input-required` task status that asks the client to pay.

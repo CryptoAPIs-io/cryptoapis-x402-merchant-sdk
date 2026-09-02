@@ -17,7 +17,7 @@
 import { createFacilitatorClient } from './facilitatorClient.js';
 import { buildPaymentRequirements } from './paymentRequirements.js';
 import {
-    runPaymentGate, PAYMENT_HEADER
+    runPaymentGate, PAYMENT_HEADER, PAYMENT_SIGNATURE_HEADER
 } from './paymentGate.js';
 
 /**
@@ -62,6 +62,7 @@ function withX402({ apiKey, payTo: defaultPayTo, baseUrl, settle = true, facilit
         return async function x402Route(req, ctx) {
             const result = await runPaymentGate({
                 paymentHeader: req.headers.get(PAYMENT_HEADER),
+                signatureHeader: req.headers.get(PAYMENT_SIGNATURE_HEADER),
                 accepts: accepts,
                 // REQUIRED by x402 v2 §5.1.2 — derived from the live request.
                 resource: resource ?? { url: req.url },
@@ -69,7 +70,11 @@ function withX402({ apiKey, payTo: defaultPayTo, baseUrl, settle = true, facilit
                 settle: settle,
             });
             if (result.outcome !== 'paid') {
-                return Response.json(result.body, { status: result.status });
+                // The 402 carries `PAYMENT-REQUIRED` beside the body.
+                return Response.json(result.body, {
+                    status: result.status,
+                    headers: result.headers ?? {},
+                });
             }
             const x402 = {
                 payer: result.payer,

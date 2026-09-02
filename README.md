@@ -223,11 +223,36 @@ and pays nothing extra.
 
 ## How it works
 
-1. **No `X-PAYMENT`** → respond `402` with `{ x402Version, accepts: [PaymentRequirements] }`.
-2. The buyer signs a payment locally and retries with a base64 `X-PAYMENT` header.
+1. **No payment** → respond `402` with the `PaymentRequired` challenge, sent **both** as the
+   base64 `PAYMENT-REQUIRED` header (x402 v2 HTTP transport) and as the JSON body
+   (`{ x402Version, resource, accepts }`, the v1 shape). The two always carry the same object.
+2. The buyer signs a payment locally and retries, sending it as a base64 `PAYMENT-SIGNATURE`
+   header (v2) or `X-PAYMENT` (v1). Both are read; `PAYMENT-SIGNATURE` wins if both are present.
 3. The SDK calls the facilitator **`/verify`** (does this authorize exactly the required payment? AML +
    travel-rule + on-chain simulate) then **`/settle`** (the facilitator signs the settle tx + broadcasts).
-4. **Paid** → your handler runs, with `req.x402` + an `X-PAYMENT-RESPONSE` receipt. **Invalid** → `402`.
+4. **Paid** → your handler runs, with `req.x402` + the settlement receipt on **both**
+   `PAYMENT-RESPONSE` (v2) and `X-PAYMENT-RESPONSE` (v1). **Invalid** → `402`.
+
+### Transport versions
+
+The v2 HTTP transport puts all protocol information in headers and treats the response body as a
+server concern; v1 put the challenge in the body and the credential in `X-PAYMENT`. This SDK speaks
+**both at once** — v2 headers are emitted alongside the v1 body, and either credential header is
+accepted — so a buyer written to the current spec and a buyer written to v1 can both pay the same
+route, and upgrading the SDK breaks neither.
+
+A v2 payload nests the chosen requirement under `accepted` (`{ scheme, network, … }`) rather than
+flat on the payload; the gate normalizes both before matching a payment to an `accepts` entry.
+
+> **Note:** the challenge is base64'd into a response header. A very long `accepts` list can approach
+> proxy header-size limits (commonly ~8KB); the body always carries the same object, so a buyer that
+> reads the body is unaffected.
+
+### If the buyer pays on a network you don't accept
+
+The gate answers `402` with `reason: 'unsupported_network'` and re-states the full `accepts` list,
+**without** calling the facilitator — so the buyer never receives a facilitator rejection for a
+requirement it was never offered.
 
 A facilitator/transport error is surfaced as an error (`next(err)` / a thrown error), **not** a `402` — a
 failing dependency is the merchant's problem, not the buyer's.

@@ -13,7 +13,7 @@
 import { createFacilitatorClient } from './facilitatorClient.js';
 import { buildPaymentRequirements } from './paymentRequirements.js';
 import {
-    runPaymentGate, PAYMENT_HEADER
+    runPaymentGate, PAYMENT_HEADER, PAYMENT_SIGNATURE_HEADER
 } from './paymentGate.js';
 
 /**
@@ -57,18 +57,21 @@ function paymentMiddleware({ apiKey, payTo: defaultPayTo, baseUrl, settle = true
         return async function x402Middleware(c, next) {
             const result = await runPaymentGate({
                 paymentHeader: c.req.header(PAYMENT_HEADER),
+                signatureHeader: c.req.header(PAYMENT_SIGNATURE_HEADER),
                 accepts: accepts,
                 // REQUIRED by x402 v2 §5.1.2 — derived from the live request.
                 resource: resource ?? { url: c.req.url },
                 facilitator: client,
                 settle: settle,
             });
-            if (result.outcome === 'paid') {
-                if (result.headers) {
-                    for (const [k, v] of Object.entries(result.headers)) {
-                        c.header(k, v);
-                    }
+            // Headers ride on EVERY outcome: a 402 carries `PAYMENT-REQUIRED`, a paid
+            // request carries the settlement receipt.
+            if (result.headers) {
+                for (const [k, v] of Object.entries(result.headers)) {
+                    c.header(k, v);
                 }
+            }
+            if (result.outcome === 'paid') {
                 c.set('x402', {
                     payer: result.payer,
                     settlement: result.settlement

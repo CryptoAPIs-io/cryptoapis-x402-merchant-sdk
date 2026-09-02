@@ -16,9 +16,21 @@
 
 import { build402Body } from './paymentRequirements.js';
 
-/** Standard x402 header names. */
+/**
+ * x402 header names. The v2 HTTP transport carries ALL protocol information in headers
+ * (`PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `PAYMENT-RESPONSE`) and treats the response
+ * body as a server implementation concern. v1 put the challenge in the body and the
+ * credential in `X-PAYMENT`.
+ *
+ * We emit and accept BOTH: the v2 headers go out beside the v1 body, and the credential
+ * is read from `PAYMENT-SIGNATURE` first, falling back to `X-PAYMENT`. That makes a
+ * v2-transport buyer able to pay without breaking any buyer already sending v1.
+ */
 const PAYMENT_HEADER = 'x-payment';
 const PAYMENT_RESPONSE_HEADER = 'x-payment-response';
+const PAYMENT_SIGNATURE_HEADER = 'payment-signature';
+const PAYMENT_REQUIRED_HEADER = 'payment-required';
+const PAYMENT_RESPONSE_V2_HEADER = 'payment-response';
 
 /**
  * Decode the base64 `X-PAYMENT` header into a PaymentPayload object.
@@ -48,10 +60,73 @@ function encodePaymentResponse(settleResult) {
 }
 
 /**
+ * Encode a PaymentRequired body as the base64 `PAYMENT-REQUIRED` header value. The v2
+ * transport carries the BARE object (no envelope) — the same object we also put in the
+ * body, so a v1 and a v2 client read identical terms.
+ *
+ * @param {Object} body the PaymentRequired body (from build402Body)
+ * @return {string} the base64 header value
+ */
+function encodePaymentRequired(body) {
+    return Buffer.from(JSON.stringify(body), 'utf8').toString('base64');
+}
+
+/**
+ * Normalize a PaymentPayload to the flat form the gate matches on.
+ *
+ * The v2 wire form (and A2A) nests the chosen requirement under `accepted`; v1 put
+ * `scheme`/`network` at the top level. The gate pairs a payment to an `accepts` entry by
+ * NETWORK, so lift them when only `accepted` has them — otherwise `payload.network` is
+ * undefined for every v2 buyer and the match silently falls through.
+ * (The facilitator tolerates either shape, but the gate's matching must see the network.)
+ *
+ * @param {(Object|null)} payment the payload as it arrived
+ * @return {(Object|null)} the payload with scheme/network at the top level
+ */
+function normalizePayload(payment) {
+    if (!payment) {
+        return null;
+    }
+    if (payment.scheme && payment.network) {
+        return payment;
+    }
+    return {
+        ...payment,
+        scheme: payment.scheme ?? payment.accepted?.scheme,
+        network: payment.network ?? payment.accepted?.network,
+    };
+}
+
+/**
+ * Build the shared parts of a 402 outcome: the v1 body AND the v2 `PAYMENT-REQUIRED`
+ * header, from one PaymentRequired object so the two can never disagree.
+ *
+ * @param {Object} params inputs
+ * @param {Array<Object>} params.accepts the acceptable PaymentRequirements
+ * @param {Object} params.resource the REQUIRED ResourceInfo for the protected resource
+ * @param {string} [params.error] human-readable reason
+ * @return {{status: number, body: Object, headers: Object}} the 402 status/body/headers
+ */
+function paymentRequired({ accepts, resource, error }) {
+    const body = build402Body({
+        accepts: accepts,
+        resource: resource,
+        error: error
+    });
+    return {
+        status: 402,
+        body: body,
+        headers: { [PAYMENT_REQUIRED_HEADER]: encodePaymentRequired(body) },
+    };
+}
+
+/**
  * Run the x402 gate for a single request.
  *
  * @param {Object} params inputs
- * @param {(string|undefined)} [params.paymentHeader] the raw base64 `X-PAYMENT` request header (HTTP)
+ * @param {(string|undefined)} [params.paymentHeader] the raw base64 `X-PAYMENT` request header (v1 HTTP)
+ * @param {(string|undefined)} [params.signatureHeader] the raw base64 `PAYMENT-SIGNATURE` request
+ *   header (v2 HTTP) — preferred over `paymentHeader` when both are present
  * @param {(Object|null)} [params.payment] an ALREADY-DECODED PaymentPayload (MCP, which carries
  *   it as structured JSON in `_meta` — pass this instead of paymentHeader)
  * @param {Array<Object>} params.accepts the acceptable PaymentRequirements for this resource
@@ -61,16 +136,22 @@ function encodePaymentResponse(settleResult) {
  * @param {boolean} [params.settle] settle on-chain when true (default true); false = verify-only (advisory)
  * @return {Promise<{outcome: 'payment-required'|'paid'|'invalid', status: number, body?: Object, headers?: Object, payer?: string, settlement?: Object, reason?: string, requirements?: Object}>} the gate decision
  */
-async function runPaymentGate({ paymentHeader, payment, accepts, resource, facilitator, settle = true }) {
+async function runPaymentGate({
+    paymentHeader, signatureHeader, payment, accepts, resource, facilitator, settle = true,
+}) {
     // HTTP hands us a base64 header; MCP already has the PaymentPayload as a plain object
     // (it rides in `_meta`, and the transport carries structured JSON natively). Accept
     // either so both transports share this core untouched.
-    const payload = payment ?? decodePaymentHeader(paymentHeader);
+    // v2 `PAYMENT-SIGNATURE` wins over v1 `X-PAYMENT`; MCP hands us the object directly.
+    // normalizePayload lifts scheme/network out of the v2 `accepted` wrapper so the
+    // network match below works for a v2 and a v1 payload alike.
+    const payload = normalizePayload(
+        payment ?? decodePaymentHeader(signatureHeader) ?? decodePaymentHeader(paymentHeader)
+    );
     if (!payload) {
         return {
             outcome: 'payment-required',
-            status: 402,
-            body: build402Body({
+            ...paymentRequired({
                 accepts: accepts,
                 resource: resource,
                 error: 'payment required'
@@ -84,7 +165,21 @@ async function runPaymentGate({ paymentHeader, payment, accepts, resource, facil
     // network is the pairing key. A merchant offering >1 asset on the SAME network
     // should list the fuller-priced/native asset first (the buyer picks a network,
     // the facilitator validates the asset against that requirement).
-    const requirements = accepts.find((r) => r.network === payload.network) ?? accepts[0];
+    const requirements = accepts.find((r) => r.network === payload.network);
+    // No match → say so plainly, with the full accepts list, WITHOUT calling the
+    // facilitator. Falling back to accepts[0] here would send the buyer the
+    // facilitator's rejection of a requirement it never saw.
+    if (!requirements) {
+        return {
+            outcome: 'invalid',
+            reason: 'unsupported_network',
+            ...paymentRequired({
+                accepts: accepts,
+                resource: resource,
+                error: `unsupported network "${payload.network ?? 'unknown'}"`
+            }),
+        };
+    }
 
     const verifyResult = await facilitator.verify({
         paymentRequirements: requirements,
@@ -93,9 +188,8 @@ async function runPaymentGate({ paymentHeader, payment, accepts, resource, facil
     if (!verifyResult?.isValid) {
         return {
             outcome: 'invalid',
-            status: 402,
             reason: verifyResult?.invalidReason ?? 'invalid_payment',
-            body: build402Body({
+            ...paymentRequired({
                 accepts: accepts,
                 resource: resource,
                 error: verifyResult?.invalidReason ?? 'invalid payment'
@@ -119,11 +213,10 @@ async function runPaymentGate({ paymentHeader, payment, accepts, resource, facil
     if (!settleResult?.success) {
         return {
             outcome: 'invalid',
-            status: 402,
             // Spec code (x402 v2 §9). Only a fallback — the facilitator normally supplies
             // `errorReason` already translated; this covers a response that omits it.
             reason: settleResult?.errorReason ?? 'invalid_transaction_state',
-            body: build402Body({
+            ...paymentRequired({
                 accepts: accepts,
                 resource: resource,
                 error: settleResult?.errorReason ?? 'settlement failed'
@@ -136,7 +229,10 @@ async function runPaymentGate({ paymentHeader, payment, accepts, resource, facil
         status: 200,
         payer: settleResult.payer,
         settlement: settleResult,
-        headers: { [PAYMENT_RESPONSE_HEADER]: encodePaymentResponse(settleResult) },
+        headers: {
+            [PAYMENT_RESPONSE_HEADER]: encodePaymentResponse(settleResult),
+            [PAYMENT_RESPONSE_V2_HEADER]: encodePaymentResponse(settleResult),
+        },
     };
 }
 
@@ -144,6 +240,11 @@ export {
     runPaymentGate,
     decodePaymentHeader,
     encodePaymentResponse,
+    encodePaymentRequired,
+    normalizePayload,
     PAYMENT_HEADER,
     PAYMENT_RESPONSE_HEADER,
+    PAYMENT_SIGNATURE_HEADER,
+    PAYMENT_REQUIRED_HEADER,
+    PAYMENT_RESPONSE_V2_HEADER,
 };
